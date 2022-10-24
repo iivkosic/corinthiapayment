@@ -1,0 +1,23 @@
+runtime: java
+env: flex
+# Application Resources
+resources:
+  cpu: 2
+  memory_gb: 2
+  disk_size_gb: 10
+  volumes:
+    - name: ramdisk1
+      volume_type: tmpfs
+      size_gb: 0.5
+# Automatic Scaling
+automatic_scaling:
+  min_num_instances: 1
+  max_num_instances: 4
+  cool_down_period_sec: 180
+  cpu_utilization:
+    target_utilization: 0.6
+vpc_access_connector:
+  name: projects/paymentlink-project/locations/us-central/connectors/corinthia-connector
+  egress_setting: all-traffic
+beta_settings:
+  cloud_sql_instances: paymentlink-project:us-central:adyenpayment

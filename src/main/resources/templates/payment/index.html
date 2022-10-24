@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <!-- Required meta tags-->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Corinthia Paybylink">
+    <meta name="author" content="MIKOS">
+    <meta name="keywords" content="Corinthia Paybylink">
+
+    <!-- Title Page-->
+    <title>Corinthia Paybylink</title>
+
+    <!-- Icons font CSS-->
+    <link href="/payment/vendor/mdi-font/css/material-design-iconic-font.min.css" rel="stylesheet" media="all">
+    <link href="/payment/vendor/font-awesome-4.7/css/font-awesome.min.css" rel="stylesheet" media="all">
+    <!-- Font special for pages-->
+    <link
+            href="https://fonts.googleapis.com/css?family=Poppins:100,100i,200,200i,300,300i,400,400i,500,500i,600,600i,700,700i,800,800i,900,900i"
+            rel="stylesheet">
+
+    <!-- Vendor CSS-->
+    <link href="/payment/vendor/select2/select2.min.css" rel="stylesheet" media="all">
+    <link href="/payment/vendor/datepicker/daterangepicker.css" rel="stylesheet" media="all">
+
+    <!-- Main CSS-->
+    <link href="/payment/css/main.css" rel="stylesheet" media="all">
+
+</head>
+
+<body>
+<div class="page-wrapper bg-gra-02 p-t-50 p-b-100 font-poppins">
+    <div class="wrapper wrapper--w780">
+        <div class="card card-4">
+            <div class="card-body">
+                <h2 class="title">Corinthia Hotels - Payment Gateway Link Form</h2>
+                <div>
+                    <div class="row row-space">
+
+                        <div class="col-2">
+                            <div class="input-group">
+                                <label class="label">Guest Last Name*</label>
+                                <input id="lname" th:value="${lastName}" class="input--style-4" type="text" name="last_name" readonly="readonly">
+                            </div>
+                        </div>
+                        <div class="col-2">
+                            <div class="input-group">
+                                <label class="label">Hotel Name*</label>
+                                <input id="hname" th:value="${hotelName}" class="input--style-4" type="text" name="hotel_name" readonly="readonly">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row row-space">
+                        <div class="col-2">
+                            <div class="input-group">
+                                <label class="label">Guest First Name*</label>
+                                <input id="fname" th:value="${firstName}" class="input--style-4" type="text" name="first_name" readonly="readonly">
+                            </div>
+                        </div>
+                        <div class="col-2">
+                            <div class="input-group">
+                                <label class="label">Opera User*</label>
+                                <input id="ouser" th:value="${operaUser}" class="input--style-4" type="text" name="opera_user" readonly="readonly">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row row-space">
+                        <div class="col-2">
+                            <div class="input-group">
+                                <label class="label">Confirmation Number*</label>
+                                <input id="cnumber" th:value="${confNumber}" class="input--style-4" type="text" name="confirmation_number" readonly="readonly">
+                            </div>
+                        </div>
+                        <div class="col-2">
+                            <div class="input-group">
+                                <label class="label">Currency*</label>
+                                <input id="currency" th:value="${currency}" class="input--style-4" type="text" name="currency" readonly="readonly">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row row-space">
+                        <div class="col-2">
+                            <div class="input-group">
+                                <label class="label">Request Amount</label>
+                                <input id="ramount" th:value="${requestAmount}" class="input--style-4" type="number" name="request_amount" readonly="readonly">
+                            </div>
+                        </div>
+                        <div class="col-2">
+                            <div class="input-group">
+                                <label class="label">Guest Country*</label>
+                                <input id="gcountry" th:value="${guestCountry}" class="input--style-4" type="text" name="guest_country" readonly="readonly">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row row-space">
+                        <div class="col-2">
+                            <div class="input-group">
+                                <label class="label">Title*</label>
+                                <input id="rreason" th:value="${title}" class="input--style-4" type="text" name="request_amount" readonly="readonly">
+                                <input id="merchantID" th:value="${merchantID}" class="input--style-4" type="hidden" name="merchant_id" readonly="readonly">
+                            </div>
+                        </div>
+                        <div class="col-2">
+                            <div class="input-group">
+                                <label class="label">Payment Request Link</label>
+                                <input id="payment-link" class="input--style-4 input--red--border" type="text" name="request_link" readonly="readonly">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <p id="valid-message"></p>
+                    </div>
+                    <div class="row row-space m-t-35">
+                        <div class="col-2">
+                            <button onclick="generateLink(this)" class="btn btn--radius-2 btn--green" type="submit">Get Link</button>
+                        </div>
+                        <div class="col-2">
+                            <button onclick="copyToClipBoard()" class="btn btn--radius-2 btn--red" type="submit">Copy Link</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Jquery JS-->
+<script src="/payment/vendor/jquery/jquery.min.js"></script>
+<!-- Vendor JS-->
+<script src="/payment/vendor/select2/select2.min.js"></script>
+<script src="/payment/vendor/datepicker/moment.min.js"></script>
+<script src="/payment/vendor/datepicker/daterangepicker.js"></script>
+
+
+<!-- Main JS-->
+<script src="/payment/js/global.js"></script>
+
+<div class="notify"><span id="notifyType" class=""></span></div>
+
+</body><!-- This templates was made by Colorlib (https://colorlib.com) -->
+
+
+<script>
+    function generateLink(x) {
+
+        $("#resetMsg").html("");
+        $("#registermsg").html("");
+        var ramount = $("#ramount").val();
+        var gcountry = $("#gcountry").val();
+        var rreason = $("#rreason").val();
+        var fname = $("#fname").val();
+        var lname = $("#lname").val();
+        var hotel = $("#hname").val();
+        var ouser = $("#ouser").val();
+        var cnumber = $("#cnumber").val();
+        var currency = $("#currency").val();
+        var merchantID = $("#merchantID").val();
+        //var regex = /^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,4})+$/;
+
+        if(ramount == '' || gcountry == '' || rreason == '' || fname == '' || lname == '' || hotel == '' || ouser == '' || cnumber == '' || currency == '') {
+            $("#valid-message").html("All fields marked with an * are required!");
+        } else if (merchantID == '') {
+            $("#valid-message").html("Merchant account id is missing!");
+        } else {
+
+            x.disabled=true;
+            x.style.background = "silver";
+            $.ajax({
+                url: '/generatelink',
+                type: 'POST',
+                data: {fname: fname, lname: lname, hotelName:hotel, operaUser:ouser, confNumber:cnumber, currency:currency, requestAmount:ramount, guestCountry:gcountry, title:rreason, merchantID:merchantID},
+                success: function (response) {
+                    if(response.message != null) {
+                        alert(response.message);
+                        x.style.background = "#57b846";
+                        x.disabled=false;
+                       // console.log(response);
+                    } else {
+                        document.getElementById("payment-link").value = response.link;
+                        $(".notify").toggleClass("active");
+                        $("#notifyType").toggleClass("success");
+
+                        /*setTimeout(function(){
+                            $(".notify").removeClass("active");
+                            $("#notifyType").removeClass("success");
+                        },10000);*/
+                    }
+                },
+                error: function (ee) {
+                    alert("ERROR");
+                }
+            });
+
+        }
+    }
+
+    function copyToClipBoard() {
+
+        var content = document.getElementById('payment-link');
+
+        content.select();
+        document.execCommand('copy');
+
+        $(".notify").removeClass("active");
+        $("#notifyType").removeClass("success");
+
+        $('.notify').css('background', '#ec2828;')
+
+        $(".notify").toggleClass("active");
+        $(".notify").toggleClass("copiedstyle");
+
+        $("#notifyType").toggleClass("copied");
+
+    }
+</script>
+
+</html>
+<!-- end document-->
