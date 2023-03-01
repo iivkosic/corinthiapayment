@@ -16,8 +16,5 @@ automatic_scaling:
   cool_down_period_sec: 180
   cpu_utilization:
     target_utilization: 0.6
-vpc_access_connector:
-  name: projects/paymentlink-project/locations/us-central/connectors/corinthia-connector
-  egress_setting: all-traffic
 beta_settings:
-  cloud_sql_instances: paymentlink-project:us-central:adyenpayment
+  cloud_sql_instances: paymentlink-project:europe-west6:adyenpayment=tcp:3306

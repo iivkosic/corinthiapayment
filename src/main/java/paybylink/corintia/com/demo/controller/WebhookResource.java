@@ -24,6 +24,8 @@ import javax.servlet.http.HttpServletRequest;
 import java.security.SignatureException;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
+import java.time.Duration;
+import java.time.Instant;
 
 @RestController
 @RequestMapping("/api")
@@ -31,14 +33,17 @@ public class WebhookResource {
 
     private static final Logger logger = LoggerFactory.getLogger(WebhookResource.class);
 
-    StringBuilder sb = new StringBuilder();
+    HMACValidator hmacValidator = new HMACValidator();
 
     @Autowired
     private ConfigUtility configUtil;
 
-
-    private final String HMAC = "7586E4E62A2B70BDC3CB70EB1CCD659E2AB6444EC23E67E04E5E048E88DA8860";
+    private final String HMAC = "5ED93809DCC4F371013F5A12A7AED204A67110DAAEA4B55459CD3385522B37C2";
     private final JavaMailSender javaMailSender;
+
+    private final String STATUS_IGNORED = "IGNORED";
+    private final String STATUS_PENDING = "PENDING";
+    private final String STATUS_SUCCESS = "SUCCESS";
 
 
     public String getHMAC() {
@@ -62,12 +67,14 @@ public class WebhookResource {
     @PostMapping("/webhooks/notifications")
     public ResponseEntity<String> webhooks(@RequestBody NotificationRequest notificationRequest){
 
+        Instant startWebhook = Instant.now(); /// START OF WEBHOOK
         notificationRequest.getNotificationItems().forEach(
                 item -> {
 
-                    // We recommend validate HMAC signature in the webhooks for security reasons
+                    logger.info("ADYEN ITEMS LOOP " + item.getPspReference());
+
                     try {
-                        if (true || new HMACValidator().validateHMAC(item, getHMAC())) {
+                        if (new HMACValidator().validateHMAC(item, getHMAC())) {
 
                             MerchantMapping merchantMapping = merchantMappingService.findByMerchantID(item.getMerchantAccountCode());
                             if(merchantMapping == null) {
@@ -76,10 +83,20 @@ public class WebhookResource {
                                 merchantMapping.setPropertyCode("");
                             }
 
-                            PaymentNotification paymentNotification = paymentNotificationService.findByMerchantReference(item.getMerchantReference());
-                            if(paymentNotification == null ) {
-                                paymentNotification = new PaymentNotification();
+                            PaymentNotification paymentNotification  = new PaymentNotification();
+
+                            try {
+                                paymentNotification = paymentNotificationService.findByMerchantReference(item.getMerchantReference());
+                                if(paymentNotification == null || (paymentNotification.getPblGenerated() != null && paymentNotification.getPblGenerated() != true)) {
+                                    paymentNotification = new PaymentNotification();
+                                    paymentNotification.setStatus(STATUS_IGNORED);
+                                } else {
+                                    paymentNotification.setStatus(STATUS_PENDING);
+                                }
+                            } catch (Exception ex) {
+                                logger.error("Error while fetching paymentNotification from database.");
                             }
+
 
                             paymentNotification.setEventCode(item.getEventCode());
                             paymentNotification.setSuccessYN(item.isSuccess());
@@ -101,6 +118,8 @@ public class WebhookResource {
                             mailMessage.setFrom(configUtil.getProperty("fromEmail"));
                             mailMessage.setSubject("--PAYMENT–");
 
+                            StringBuilder sb = new StringBuilder();
+
                             sb.append("{\"paymentNotification\":{\n" +
                                     "\t\"eventCode\": \"" + item.getEventCode() + "\",\n" +
                                     "\t\"successYN\": \"" + successToString(paymentNotification.getSuccessYN()) + "\",\n" +
@@ -120,9 +139,29 @@ public class WebhookResource {
 
                             mailMessage.setText(sb.toString());
 
+                            Instant start = Instant.now(); /// before email send
+
                             //if(item.getEventCode().equals("AUTHORISATION") && item.isSuccess()) {
-                                javaMailSender.send(mailMessage);
-                            //}
+                            try {
+                                logger.info("Webhook fired: TRYING TO SEND EMAIL");
+                                logger.info(sb.toString());
+                                if(paymentNotification.getStatus() !=null && !paymentNotification.getStatus().equals(STATUS_IGNORED) && paymentNotification.getEventCode() != null && paymentNotification.getEventCode().equals("AUTHORISATION")) {
+                                    javaMailSender.send(mailMessage);
+                                    paymentNotification.setStatus(STATUS_SUCCESS);
+                                }
+                                paymentNotificationService.savePaymentNotification(paymentNotification);
+                                sb.setLength(0);
+                            } catch (Exception ex) {
+                                logger.error("SMTP Authentification Failed. E-mail was not delivered.");
+                                logger.error(ex.getMessage());
+                                paymentNotification.setStatus(STATUS_PENDING);
+                                paymentNotificationService.savePaymentNotification(paymentNotification);
+                            }
+
+                            //}after email send
+                            Instant end = Instant.now();
+                            Duration timeElapsed = Duration.between(start, end);
+                            logger.info("TIME TAKEN FOR EMAIL SEND: "+ timeElapsed.toMillis() +" milliseconds");
 
                         } else {
                             // invalid HMAC signature: do not send [accepted] response
@@ -138,8 +177,11 @@ public class WebhookResource {
 
         // Notifying the server we're accepting the payload
 
-        logger.info("Webhook fired: ");
-        logger.info(sb.toString());
+
+        Instant endWebhook = Instant.now(); /// END OF WEBHOOK
+        Duration timeElapsed = Duration.between(startWebhook, endWebhook);
+        logger.info("TIME TAKEN FOR WEBHOOK PROCESS: "+ timeElapsed.toMillis() +" milliseconds");
+
         return ResponseEntity.ok().body("[accepted]");
     }
 

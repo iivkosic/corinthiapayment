@@ -12,6 +12,8 @@ import paybylink.corintia.com.demo.model.PaymentNotification;
 import paybylink.corintia.com.demo.service.PaymentNotificationServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.mail.AuthenticationFailedException;
 import javax.servlet.http.HttpSession;
 import java.util.ArrayList;
 import java.util.List;
@@ -59,16 +61,6 @@ public class Web {
         model.addAttribute("title" , title);
         model.addAttribute("merchantID" , merchantID);
 
-
-        /*SimpleMailMessage mailMessage = new SimpleMailMessage();
-        mailMessage.setTo("ivan.ivkosic@gmail.com");
-        mailMessage.setFrom(configUtil.getProperty("fromEmail"));
-        mailMessage.setSubject("--PAYMENT–");
-        StringBuilder sb = new StringBuilder();
-        sb.append("Hi I am Ivan");
-
-        mailMessage.setText(sb.toString());
-        javaMailSender.send(mailMessage);*/
 
 
         return "payment/index.html";

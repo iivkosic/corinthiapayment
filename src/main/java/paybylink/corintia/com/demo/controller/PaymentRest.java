@@ -25,9 +25,9 @@ import java.util.*;
 @RestController
 public class PaymentRest {
 
-    private final String serverUrl = "https://checkout-test.adyen.com";
-    private final String version = "v68";
-    private final String APIKey = "AQEkhmfuXNWTK0Qc+iSTnXYxqfCTQYrRE9yW+5BnpSNd0yUi5j6OEMFdWw2+5HzctViMSCJMYAc=-8SZjLq+EjtFfKOuHT0fIfGq6mz+hUuFFTVsz/lJ/prY=-W8t{Ik^LnVYymumI";
+    private final String serverUrl = "https://589ca91f8810687e-corinthia-checkout-live.adyenpayments.com";
+    private final String version = "v69";
+    private final String APIKey = "AQEkhmfuXNWTK0Qc+iSTnXYxqfCTQYrRE9yW+5BnpSNd0yUi5j6OEMFdWw2+5HzctViMSCJMYAc=-5rE6sYEZgJAP41k6OUdsYWVuJLUC9L6fC2bXf+NruS8=-xYWUG5&Gfa}5&&uc";
     private final String merchantAccount = "Corinthia";
 
 
@@ -77,7 +77,7 @@ public class PaymentRest {
 
 
         String xApiKey = APIKey;
-        Client client = new Client(xApiKey, Environment.TEST);
+        Client client = new Client(xApiKey, Environment.LIVE,"589ca91f8810687e-corinthia");
         PaymentLinks paymentLinks = new PaymentLinks(client);
         CreatePaymentLinkRequest createPaymentLinkRequest = new CreatePaymentLinkRequest();
         Amount amount = new Amount();
@@ -111,6 +111,7 @@ public class PaymentRest {
         paymentNotification.setLast(lastName);
         paymentNotification.setMerchantReference(timeStamp + hotelName + confNumber);
         paymentNotification.setTitle(title);
+        paymentNotification.setPblGenerated(true);
         paymentNotificationService.savePaymentNotification(paymentNotification);
 
         objectNode.put("link", generatedLink);

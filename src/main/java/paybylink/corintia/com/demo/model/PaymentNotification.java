@@ -36,6 +36,21 @@ public class PaymentNotification {
 
     private String last;
 
+
+    private String status;
+
+    private String title;
+
+    private Boolean pblGenerated;
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
     public String getTitle() {
         return title;
     }
@@ -43,8 +58,6 @@ public class PaymentNotification {
     public void setTitle(String title) {
         this.title = title;
     }
-
-    private String title;
 
     @Column(columnDefinition = "TEXT")
     private String payload;
@@ -154,5 +167,11 @@ public class PaymentNotification {
         this.payload = payload;
     }
 
+    public Boolean getPblGenerated() {
+        return pblGenerated;
+    }
 
+    public void setPblGenerated(Boolean pblGenerated) {
+        this.pblGenerated = pblGenerated;
+    }
 }
