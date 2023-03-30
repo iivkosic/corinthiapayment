@@ -6,20 +6,18 @@ import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import paybylink.corintia.com.demo.async.EmailSender;
 import paybylink.corintia.com.demo.config.ConfigUtility;
 import paybylink.corintia.com.demo.model.MerchantMapping;
 import paybylink.corintia.com.demo.model.PaymentNotification;
 import paybylink.corintia.com.demo.service.MerchantMappingServiceImpl;
 import paybylink.corintia.com.demo.service.PaymentNotificationServiceImpl;
-
 import javax.servlet.http.HttpServletRequest;
 import java.security.SignatureException;
 import java.sql.Timestamp;
@@ -39,7 +37,8 @@ public class WebhookResource {
     private ConfigUtility configUtil;
 
     private final String HMAC = "5ED93809DCC4F371013F5A12A7AED204A67110DAAEA4B55459CD3385522B37C2";
-    private final JavaMailSender javaMailSender;
+
+    private final EmailSender emailSender;
 
     private final String STATUS_IGNORED = "IGNORED";
     private final String STATUS_PENDING = "PENDING";
@@ -53,8 +52,8 @@ public class WebhookResource {
     private final PaymentNotificationServiceImpl paymentNotificationService;
     private final MerchantMappingServiceImpl merchantMappingService;
 
-    public WebhookResource(JavaMailSender javaMailSender, PaymentNotificationServiceImpl paymentNotificationService, MerchantMappingServiceImpl merchantMappingService) {
-        this.javaMailSender = javaMailSender;
+    public WebhookResource(EmailSender emailSender, PaymentNotificationServiceImpl paymentNotificationService, MerchantMappingServiceImpl merchantMappingService) {
+        this.emailSender = emailSender;
         this.paymentNotificationService = paymentNotificationService;
         this.merchantMappingService = merchantMappingService;
     }
@@ -74,20 +73,21 @@ public class WebhookResource {
                     logger.info("ADYEN ITEMS LOOP " + item.getPspReference());
 
                     try {
-                        if (new HMACValidator().validateHMAC(item, getHMAC())) {
+                        if (hmacValidator.validateHMAC(item, getHMAC())) {
 
                             MerchantMapping merchantMapping = merchantMappingService.findByMerchantID(item.getMerchantAccountCode());
                             if(merchantMapping == null) {
                                 merchantMapping = new MerchantMapping();
                                 merchantMapping.setCcEmails("");
                                 merchantMapping.setPropertyCode("");
+                                merchantMapping.setTemplateName("");
                             }
 
                             PaymentNotification paymentNotification  = new PaymentNotification();
 
                             try {
                                 paymentNotification = paymentNotificationService.findByMerchantReference(item.getMerchantReference());
-                                if(paymentNotification == null || (paymentNotification.getPblGenerated() != null && paymentNotification.getPblGenerated() != true)) {
+                                if(paymentNotification == null || paymentNotification.getPblGenerated() == null || paymentNotification.getPblGenerated() == false) {
                                     paymentNotification = new PaymentNotification();
                                     paymentNotification.setStatus(STATUS_IGNORED);
                                 } else {
@@ -97,21 +97,22 @@ public class WebhookResource {
                                 logger.error("Error while fetching paymentNotification from database.");
                             }
 
-
                             paymentNotification.setEventCode(item.getEventCode());
                             paymentNotification.setSuccessYN(item.isSuccess());
+                            if(paymentNotification.getSuccessYN() == null || paymentNotification.getSuccessYN() == false) {
+                                paymentNotification.setStatus(STATUS_IGNORED);
+                            }
                             paymentNotification.setEventDate(new Timestamp(item.getEventDate().getTime()));
                             paymentNotification.setMerchantAccountCode(item.getMerchantAccountCode());
                             paymentNotification.setMerchantReference(item.getMerchantReference());
                             paymentNotification.setPspReference(item.getPspReference());
-                            paymentNotification.setAmount(item.getAmount().getValue());
                             paymentNotification.setCurrency(item.getAmount().getCurrency());
                             paymentNotification.setPayload(new Gson().toJson(notificationRequest));
                             paymentNotification.setEmail(item.getAdditionalData().get("shopperEmail"));
-
+                            paymentNotification.setAmount(item.getAmount().getValue());
                             paymentNotificationService.savePaymentNotification(paymentNotification);
 
-                            DecimalFormat df = new DecimalFormat("#.00");
+                            DecimalFormat df = new DecimalFormat("0.00");
 
                             SimpleMailMessage mailMessage = new SimpleMailMessage();
                             mailMessage.setTo(configUtil.getProperty("toEmail"));
@@ -127,41 +128,25 @@ public class WebhookResource {
                                     "\t\"pspReference\": \"" + paymentNotification.getPspReference() + "\",\n" +
                                     "\t\"hotel\": \"" + merchantMapping.getPropertyCode() + "\",\n" +
                                     "\t\"merchantReference\": \"" + paymentNotification.getMerchantReference() + "\",\n" +
-                                    "\t\"amount\": " + df.format(paymentNotification.getAmount()/100) + ",\n" +
+                                    "\t\"amount\": " + df.format(paymentNotification.getAmount().doubleValue()/100) + ",\n" +
                                     "\t\"first\": \"" + paymentNotification.getFirst() + "\",\n" +
                                     "\t\"last\": \"" + paymentNotification.getLast() + "\", \n" +
                                     "\t\"title\": \"" + paymentNotification.getTitle() + "\", \n" +
                                     "\t\"currency\": \"" + paymentNotification.getCurrency() + "\",\n" +
                                     "\t\"ccEmail\": \"" + merchantMapping.getCcEmails() + "\",\n" +
-                                    "\t\"responsysTemplate\": \"TEST_PAYMENT_NOTIFICATION\",\n" +
+                                    "\t\"responsysTemplate\": \"" + merchantMapping.getTemplateName() + "\",\n" +
                                     "\t\"shopperEmail\" : \"" + item.getAdditionalData().get("shopperEmail") + "\"\n" +
                                     "}}");
 
                             mailMessage.setText(sb.toString());
 
-                            Instant start = Instant.now(); /// before email send
 
-                            //if(item.getEventCode().equals("AUTHORISATION") && item.isSuccess()) {
-                            try {
-                                logger.info("Webhook fired: TRYING TO SEND EMAIL");
-                                logger.info(sb.toString());
-                                if(paymentNotification.getStatus() !=null && !paymentNotification.getStatus().equals(STATUS_IGNORED) && paymentNotification.getEventCode() != null && paymentNotification.getEventCode().equals("AUTHORISATION")) {
-                                    javaMailSender.send(mailMessage);
-                                    paymentNotification.setStatus(STATUS_SUCCESS);
-                                }
-                                paymentNotificationService.savePaymentNotification(paymentNotification);
-                                sb.setLength(0);
-                            } catch (Exception ex) {
-                                logger.error("SMTP Authentification Failed. E-mail was not delivered.");
-                                logger.error(ex.getMessage());
-                                paymentNotification.setStatus(STATUS_PENDING);
-                                paymentNotificationService.savePaymentNotification(paymentNotification);
+                            logger.info("WEBHOOK FIRED");
+                            logger.info(sb.toString());
+                            if(paymentNotification.getSuccessYN() != null && paymentNotification.getSuccessYN() == true && paymentNotification.getStatus() !=null && !paymentNotification.getStatus().equals(STATUS_IGNORED) && paymentNotification.getEventCode() != null && paymentNotification.getEventCode().equals("AUTHORISATION")) {
+                                emailSender.asyncMailSend(mailMessage, paymentNotification);
                             }
-
-                            //}after email send
-                            Instant end = Instant.now();
-                            Duration timeElapsed = Duration.between(start, end);
-                            logger.info("TIME TAKEN FOR EMAIL SEND: "+ timeElapsed.toMillis() +" milliseconds");
+                            sb.setLength(0);
 
                         } else {
                             // invalid HMAC signature: do not send [accepted] response
@@ -176,7 +161,6 @@ public class WebhookResource {
         );
 
         // Notifying the server we're accepting the payload
-
 
         Instant endWebhook = Instant.now(); /// END OF WEBHOOK
         Duration timeElapsed = Duration.between(startWebhook, endWebhook);

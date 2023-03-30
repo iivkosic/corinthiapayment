@@ -21,6 +21,8 @@ public class PaymentNotificationServiceImpl {
 
     public List<PaymentNotification> findAll() {return paymentNotificationRepository.findAll();}
 
+    public List<PaymentNotification> findByStatusAndEventCodeAndPblGenerated(String status, String eventCode, Boolean pblGenerated) {return paymentNotificationRepository.findByStatusAndEventCodeAndPblGenerated(status, eventCode, pblGenerated);}
+
     public PaymentNotification findByMerchantReference(String merchantReference) {return paymentNotificationRepository.findByMerchantReference(merchantReference);}
 
 }

@@ -17,6 +17,8 @@ public class MerchantMapping {
     private String merchantID;
     private String ccEmails;
 
+    private String templateName;
+
     public String getPropertyCode() {
         return propertyCode;
     }
@@ -47,5 +49,13 @@ public class MerchantMapping {
 
     public void setCcEmails(String ccEmails) {
         this.ccEmails = ccEmails;
+    }
+
+    public String getTemplateName() {
+        return templateName;
+    }
+
+    public void setTemplateName(String responsysTemplate) {
+        this.templateName = responsysTemplate;
     }
 }

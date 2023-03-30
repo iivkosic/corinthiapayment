@@ -18,6 +18,7 @@ import paybylink.corintia.com.demo.model.PaymentNotification;
 import paybylink.corintia.com.demo.service.PaymentNotificationServiceImpl;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -47,12 +48,14 @@ public class PaymentRest {
                                           @RequestParam(value = "operaUser", required = false) String operaUser,
                                           @RequestParam(value = "confNumber", required = false) String confNumber,
                                           @RequestParam(value = "currency", required = false) String currency,
-                                          @RequestParam(value = "requestAmount", required = false) Long requestAmount,
+                                          @RequestParam(value = "requestAmount", required = false) Double requestAmount,
                                           @RequestParam(value = "guestCountry", required = false) String guestCountry,
                                           @RequestParam(value = "title", required = false) String title,
                                           @RequestParam(value = "merchantID", required = false) String merchantID) {
 
         Map<String, String> countryLocales = new HashMap<>();
+        requestAmount = Math.round(requestAmount*100.0)/100.0;
+        requestAmount = requestAmount * 100;
 
         countryLocales.put("HR", "hr-HR");
         countryLocales.put("CZ", "cs-CZ");
@@ -82,7 +85,7 @@ public class PaymentRest {
         CreatePaymentLinkRequest createPaymentLinkRequest = new CreatePaymentLinkRequest();
         Amount amount = new Amount();
         amount.setCurrency(currency);
-        amount.setValue(requestAmount * 100);
+        amount.setValue(requestAmount.longValue());
         createPaymentLinkRequest.setAmount(amount);
         createPaymentLinkRequest.setReference(timeStamp + hotelName + confNumber);
         createPaymentLinkRequest.setShopperReference(timeStamp + hotelName + confNumber);
@@ -112,6 +115,7 @@ public class PaymentRest {
         paymentNotification.setMerchantReference(timeStamp + hotelName + confNumber);
         paymentNotification.setTitle(title);
         paymentNotification.setPblGenerated(true);
+        paymentNotification.setAmount(requestAmount.longValue());
         paymentNotificationService.savePaymentNotification(paymentNotification);
 
         objectNode.put("link", generatedLink);
